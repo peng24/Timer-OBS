@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     textAlign: 'center',
+    speakingPulse: true,
   },
   audio: {
     masterMute: false,
@@ -83,13 +84,223 @@ const DEFAULT_SETTINGS = {
   ]
 };
 
+const THEME_PRESETS = {
+  modern_dark: {
+    name: '✨ Modern Dark',
+    style: {
+      fontFamily: 'Kanit',
+      fontSize: 72,
+      fontWeight: '600',
+      letterSpacing: 2,
+      textColor: '#ffffff',
+      textStroke: true,
+      strokeColor: '#000000',
+      strokeWidth: 3,
+      textShadow: true,
+      shadowColor: 'rgba(0, 0, 0, 0.85)',
+      shadowBlur: 12,
+      bgTransparent: false,
+      bgColor: '#111827',
+      bgOpacity: 0.75,
+      borderRadius: 20,
+      paddingX: 36,
+      paddingY: 20,
+    }
+  },
+  cyberpunk: {
+    name: '⚡ Cyberpunk Neon',
+    style: {
+      fontFamily: 'Chakra Petch',
+      fontSize: 74,
+      fontWeight: '700',
+      letterSpacing: 3,
+      textColor: '#00f3ff',
+      textStroke: true,
+      strokeColor: '#1e1b4b',
+      strokeWidth: 3.5,
+      textShadow: true,
+      shadowColor: 'rgba(0, 243, 255, 0.65)',
+      shadowBlur: 16,
+      bgTransparent: false,
+      bgColor: '#090d16',
+      bgOpacity: 0.85,
+      borderRadius: 12,
+      paddingX: 40,
+      paddingY: 20,
+    }
+  },
+  pastel_cute: {
+    name: '🌸 Pastel Cute',
+    style: {
+      fontFamily: 'Mali',
+      fontSize: 68,
+      fontWeight: '600',
+      letterSpacing: 1,
+      textColor: '#fdf2f8',
+      textStroke: true,
+      strokeColor: '#831843',
+      strokeWidth: 3,
+      textShadow: true,
+      shadowColor: 'rgba(131, 24, 67, 0.5)',
+      shadowBlur: 10,
+      bgTransparent: false,
+      bgColor: '#ec4899',
+      bgOpacity: 0.35,
+      borderRadius: 32,
+      paddingX: 40,
+      paddingY: 20,
+    }
+  },
+  minimal_clean: {
+    name: '🌿 Minimal Clean',
+    style: {
+      fontFamily: 'Prompt',
+      fontSize: 68,
+      fontWeight: '500',
+      letterSpacing: 2,
+      textColor: '#f8fafc',
+      textStroke: false,
+      strokeColor: '#000000',
+      strokeWidth: 2,
+      textShadow: true,
+      shadowColor: 'rgba(0, 0, 0, 0.5)',
+      shadowBlur: 8,
+      bgTransparent: false,
+      bgColor: '#0f172a',
+      bgOpacity: 0.5,
+      borderRadius: 16,
+      paddingX: 32,
+      paddingY: 16,
+    }
+  },
+  gold_luxury: {
+    name: '🔥 Gold Luxury',
+    style: {
+      fontFamily: 'Chonburi',
+      fontSize: 70,
+      fontWeight: '400',
+      letterSpacing: 2,
+      textColor: '#fde047',
+      textStroke: true,
+      strokeColor: '#1c1917',
+      strokeWidth: 3.5,
+      textShadow: true,
+      shadowColor: 'rgba(0, 0, 0, 0.9)',
+      shadowBlur: 14,
+      bgTransparent: false,
+      bgColor: '#1c1917',
+      bgOpacity: 0.8,
+      borderRadius: 24,
+      paddingX: 40,
+      paddingY: 20,
+    }
+  },
+  pure_overlay: {
+    name: '👻 Pure Overlay (ไร้กรอบ)',
+    style: {
+      fontFamily: 'Mitr',
+      fontSize: 76,
+      fontWeight: '600',
+      letterSpacing: 2,
+      textColor: '#ffffff',
+      textStroke: true,
+      strokeColor: '#000000',
+      strokeWidth: 4,
+      textShadow: true,
+      shadowColor: 'rgba(0, 0, 0, 0.95)',
+      shadowBlur: 14,
+      bgTransparent: true,
+      bgColor: '#111827',
+      bgOpacity: 0.75,
+      borderRadius: 20,
+      paddingX: 24,
+      paddingY: 16,
+    }
+  }
+};
+
+window.THEME_PRESETS = THEME_PRESETS;
+
 class StorageManager {
   constructor() {
     this.settings = this.load();
   }
 
+  /**
+   * แปลง JSON เป็น Base64 URL-safe สำหรับแนบไปกับลิงก์ OBS
+   */
+  encodeToUrlParam() {
+    try {
+      const jsonStr = JSON.stringify(this.settings);
+      const bytes = new TextEncoder().encode(jsonStr);
+      let binary = '';
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    } catch (e) {
+      console.error('Failed to encode settings to URL param', e);
+      return '';
+    }
+  }
+
+  /**
+   * ถอดรหัส Base64 URL-safe กลับมาเป็น Object การตั้งค่า
+   */
+  decodeFromUrlParam(cfgStr) {
+    try {
+      let base64 = cfgStr.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const jsonStr = new TextDecoder().decode(bytes);
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      console.warn('Invalid cfg URL parameter:', e);
+      return null;
+    }
+  }
+
+  /**
+   * สร้างลิงก์ OBS Overlay พร้อมแนบค่าการตั้งค่าปัจจุบันทั้งหมด
+   */
+  getObsOverlayUrl() {
+    const cfg = this.encodeToUrlParam();
+    const base = `${window.location.origin}${window.location.pathname}?mode=overlay`;
+    return cfg ? `${base}&cfg=${cfg}` : base;
+  }
+
   load() {
     try {
+      // 1. ตรวจสอบก่อนว่ามีค่าตั้งค่าแนบมากับ URL (?cfg=...) หรือไม่ (สำหรับ OBS Browser Source)
+      const urlParams = new URLSearchParams(window.location.search);
+      const cfgParam = urlParams.get('cfg');
+      if (cfgParam) {
+        const decoded = this.decodeFromUrlParam(cfgParam);
+        if (decoded && typeof decoded === 'object') {
+          const merged = {
+            clock: { ...DEFAULT_SETTINGS.clock, ...(decoded.clock || {}) },
+            style: { ...DEFAULT_SETTINGS.style, ...(decoded.style || {}) },
+            audio: { ...DEFAULT_SETTINGS.audio, ...(decoded.audio || {}) },
+            rules: Array.isArray(decoded.rules) && decoded.rules.length > 0
+              ? decoded.rules
+              : DEFAULT_SETTINGS.rules
+          };
+          // บันทึกลง localStorage ของ OBS ด้วยเพื่อให้จำค่าไว้ใช้ต่อได้
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
+        }
+      }
+
+      // 2. โหลดจาก localStorage ตามปกติ
       const data = localStorage.getItem(STORAGE_KEY);
       if (!data) return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
       

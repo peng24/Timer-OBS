@@ -195,11 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // อัปเดตลิงก์ OBS Input
+    // อัปเดตลิงก์ OBS Input (พร้อมแนบค่าตั้งค่าทั้งหมดลงใน URL)
+    updateObsUrlField();
+  }
+
+  function updateObsUrlField() {
     const obsUrlInput = document.getElementById('obs-url-input');
-    if (obsUrlInput) {
-      const overlayUrl = `${window.location.origin}${window.location.pathname}?mode=overlay`;
-      obsUrlInput.value = overlayUrl;
+    if (obsUrlInput && window.storageManager) {
+      obsUrlInput.value = window.storageManager.getObsOverlayUrl();
     }
   }
 
@@ -230,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('val-stroke-width').textContent = `${s.style.strokeWidth}px`;
 
     document.getElementById('setting-text-shadow').checked = !!s.style.textShadow;
+    const pulseCheckbox = document.getElementById('setting-speaking-pulse');
+    if (pulseCheckbox) pulseCheckbox.checked = s.style.speakingPulse !== false;
 
     document.getElementById('setting-bg-transparent').checked = !!s.style.bgTransparent;
     document.getElementById('group-bg-options').style.display = s.style.bgTransparent ? 'none' : 'block';
@@ -384,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetRule) {
           targetRule.enabled = e.target.checked;
           window.storageManager.save();
+          updateObsUrlField();
           showToast(`${targetRule.enabled ? 'เปิด' : 'ปิด'}การทำงาน: "${targetRule.name}"`);
         }
       });
@@ -414,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm(`คุณต้องการลบกฎ "${targetRule?.name}" หรือไม่?`)) {
           window.storageManager.settings.rules = window.storageManager.settings.rules.filter(r => r.id !== id);
           window.storageManager.save();
+          updateObsUrlField();
           renderRulesList();
           showToast('ลบกฎเรียบร้อยแล้ว');
         }
@@ -465,18 +472,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const STANDARD_INTERVALS = ['5', '10', '15', '20', '30', '45', '60', '90', '120'];
+
   // 6. จัดการ Modal เพิ่ม / แก้ไขกฎ
   function openRuleModal(ruleId = null) {
     const isEdit = !!ruleId;
     document.getElementById('rule-modal-title').textContent = isEdit ? '✏️ แก้ไขกฎการเตือนเวลา' : '⏰ เพิ่มกฎการเตือนเวลาใหม่';
     document.getElementById('modal-rule-id').value = ruleId || '';
 
+    const intervalSelect = document.getElementById('modal-rule-interval');
+    const customIntervalInput = document.getElementById('modal-rule-custom-interval');
+
     if (isEdit) {
       const rule = window.storageManager.settings.rules.find(r => r.id === ruleId);
       if (!rule) return;
       document.getElementById('modal-rule-name').value = rule.name || '';
       document.getElementById('modal-rule-type').value = rule.type || 'interval';
-      document.getElementById('modal-rule-interval').value = rule.intervalMinutes || 60;
+      
+      const intervalStr = String(rule.intervalMinutes || 60);
+      if (STANDARD_INTERVALS.includes(intervalStr)) {
+        intervalSelect.value = intervalStr;
+      } else {
+        intervalSelect.value = 'custom';
+        if (customIntervalInput) customIntervalInput.value = intervalStr;
+      }
       
       const timeParts = (rule.time || '12:00').split(':');
       const hourVal = (timeParts[0] || '12').padStart(2, '0');
@@ -491,7 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       document.getElementById('modal-rule-name').value = 'เตือนเวลาใหม่';
       document.getElementById('modal-rule-type').value = 'interval';
-      document.getElementById('modal-rule-interval').value = '60';
+      intervalSelect.value = '60';
+      if (customIntervalInput) customIntervalInput.value = '25';
       
       if (document.getElementById('modal-rule-hour')) document.getElementById('modal-rule-hour').value = '12';
       if (document.getElementById('modal-rule-minute')) document.getElementById('modal-rule-minute').value = '00';
@@ -514,10 +534,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateRuleModalFields() {
     const type = document.getElementById('modal-rule-type').value;
+    const intervalVal = document.getElementById('modal-rule-interval').value;
     const mode = document.getElementById('modal-rule-mode').value;
     const sound = document.getElementById('modal-rule-sound').value;
 
     document.getElementById('modal-group-interval').style.display = type === 'interval' ? 'block' : 'none';
+    const customIntervalGroup = document.getElementById('modal-group-custom-interval');
+    if (customIntervalGroup) {
+      customIntervalGroup.style.display = (type === 'interval' && intervalVal === 'custom') ? 'block' : 'none';
+    }
     document.getElementById('modal-group-specific').style.display = type === 'specific' ? 'block' : 'none';
 
     document.getElementById('modal-group-sound').style.display = mode !== 'tts' ? 'block' : 'none';
@@ -526,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('modal-rule-type').addEventListener('change', updateRuleModalFields);
+  document.getElementById('modal-rule-interval').addEventListener('change', updateRuleModalFields);
   document.getElementById('modal-rule-mode').addEventListener('change', updateRuleModalFields);
   document.getElementById('modal-rule-sound').addEventListener('change', updateRuleModalFields);
 
@@ -533,7 +559,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = document.getElementById('modal-rule-id').value;
     const name = document.getElementById('modal-rule-name').value.trim() || 'การเตือนเวลา';
     const type = document.getElementById('modal-rule-type').value;
-    const intervalMinutes = parseInt(document.getElementById('modal-rule-interval').value, 10) || 60;
+    
+    const intervalSelectVal = document.getElementById('modal-rule-interval').value;
+    let intervalMinutes = 60;
+    if (intervalSelectVal === 'custom') {
+      intervalMinutes = Math.max(1, parseInt(document.getElementById('modal-rule-custom-interval')?.value, 10) || 25);
+    } else {
+      intervalMinutes = parseInt(intervalSelectVal, 10) || 60;
+    }
     
     // เวลาแบบ 24 ชั่วโมง (HH:MM)
     const hour = (document.getElementById('modal-rule-hour')?.value || '12').padStart(2, '0');
@@ -569,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.storageManager.save();
+    updateObsUrlField();
     renderRulesList();
     closeRuleModal();
     showToast('บันทึกกฎเรียบร้อยแล้ว');
@@ -596,22 +630,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 7. Event Listeners สำหรับการตั้งค่าต่าง ๆ (Live Reactive Controls)
 
+  // 1-Click Theme Presets
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const presetKey = btn.dataset.preset;
+      const preset = window.THEME_PRESETS?.[presetKey];
+      if (!preset) return;
+
+      Object.assign(window.storageManager.settings.style, preset.style);
+      window.storageManager.save();
+      syncSettingsToUI();
+      applyStyles();
+      showToast(`🎨 เปลี่ยนธีมเป็น "${preset.name}" เรียบร้อย!`);
+    });
+  });
+
   // Clock Toggles
   document.getElementById('setting-format12').addEventListener('change', (e) => {
     window.storageManager.settings.clock.format12 = e.target.checked;
     window.storageManager.save();
+    updateObsUrlField();
   });
   document.getElementById('setting-show-seconds').addEventListener('change', (e) => {
     window.storageManager.settings.clock.showSeconds = e.target.checked;
     window.storageManager.save();
+    updateObsUrlField();
   });
   document.getElementById('setting-show-date').addEventListener('change', (e) => {
     window.storageManager.settings.clock.showDate = e.target.checked;
     window.storageManager.save();
+    updateObsUrlField();
   });
   document.getElementById('setting-date-format').addEventListener('change', (e) => {
     window.storageManager.settings.clock.dateFormat = e.target.value;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   // Fonts
@@ -709,12 +762,21 @@ document.addEventListener('DOMContentLoaded', () => {
     applyStyles();
   });
 
-  // Text Shadow
+  // Text Shadow & Speaking Pulse
   document.getElementById('setting-text-shadow').addEventListener('change', (e) => {
     window.storageManager.settings.style.textShadow = e.target.checked;
     window.storageManager.save();
     applyStyles();
   });
+
+  const pulseCheckboxEl = document.getElementById('setting-speaking-pulse');
+  if (pulseCheckboxEl) {
+    pulseCheckboxEl.addEventListener('change', (e) => {
+      window.storageManager.settings.style.speakingPulse = e.target.checked;
+      window.storageManager.save();
+      updateObsUrlField();
+    });
+  }
 
   // Background
   document.getElementById('setting-bg-transparent').addEventListener('change', (e) => {
@@ -769,6 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('setting-master-mute').addEventListener('change', (e) => {
     window.storageManager.settings.audio.masterMute = e.target.checked;
     window.storageManager.save();
+    updateObsUrlField();
     updateMuteUI(e.target.checked);
     showToast(e.target.checked ? '🔇 ปิดเสียงทั้งหมดแล้ว' : '🔊 เปิดเสียงแล้ว');
   });
@@ -779,6 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('val-alarm-volume').textContent = `${Math.round(val * 100)}%`;
     window.storageManager.settings.audio.alarmVolume = val;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   // Quick sound preview button
@@ -793,6 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ttsEngineSelect.addEventListener('change', (e) => {
       window.storageManager.settings.audio.ttsEngine = e.target.value;
       window.storageManager.save();
+      updateObsUrlField();
       updateTtsEngineUI(e.target.value);
       showToast(e.target.value === 'google' 
         ? '🌐 สลับใช้เสียง Google TTS (เป็นธรรมชาติที่สุด)' 
@@ -805,6 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('val-tts-volume').textContent = `${Math.round(val * 100)}%`;
     window.storageManager.settings.audio.ttsVolume = val;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   document.getElementById('setting-tts-rate').addEventListener('input', (e) => {
@@ -812,6 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('val-tts-rate').textContent = `${val}x`;
     window.storageManager.settings.audio.ttsRate = val;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   document.getElementById('setting-tts-pitch').addEventListener('input', (e) => {
@@ -819,11 +886,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('val-tts-pitch').textContent = `${val}`;
     window.storageManager.settings.audio.ttsPitch = val;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   document.getElementById('setting-tts-voice').addEventListener('change', (e) => {
     window.storageManager.settings.audio.ttsVoice = e.target.value;
     window.storageManager.save();
+    updateObsUrlField();
   });
 
   document.getElementById('btn-test-tts-speech').addEventListener('click', () => {
@@ -835,9 +904,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 8. System Tab: Copy, Export, Import, Reset
   const copyObsUrl = () => {
-    const overlayUrl = `${window.location.origin}${window.location.pathname}?mode=overlay`;
+    const overlayUrl = window.storageManager.getObsOverlayUrl();
+    updateObsUrlField();
     navigator.clipboard.writeText(overlayUrl).then(() => {
-      showToast('📋 คัดลอกลิงก์ OBS Overlay ไปยังคลิปบอร์ดแล้ว!');
+      showToast('📋 คัดลอกลิงก์ OBS (พร้อมค่าตั้งค่าและกฎทั้งหมด) แล้ว!');
     }).catch(() => {
       prompt('คัดลอกลิงก์นี้ไปวางใน Browser Source ของ OBS:', overlayUrl);
     });
@@ -893,10 +963,12 @@ document.addEventListener('DOMContentLoaded', () => {
   btnQuickTest.addEventListener('click', () => {
     const now = new Date();
     showToast('🔔 กำลังเล่นเสียงทดสอบ...');
-    window.soundEngine.play('chime').then(() => {
-      const message = `ขณะนี้เวลา ${window.thaiTTS.timeToThaiWords(now)} ค่ะ`;
-      window.thaiTTS.speakText(message);
-    });
+    window.thaiTTS.triggerRule({
+      enabled: true,
+      mode: 'both',
+      soundEffect: 'chime',
+      messageTemplate: 'ขณะนี้เวลา {time} ค่ะ'
+    }, now);
   });
 
   // Live Preview Background Switcher

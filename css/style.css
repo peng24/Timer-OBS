@@ -87,6 +87,22 @@ body.is-overlay .modal-backdrop {
   max-width: 95vw;
 }
 
+/* เอฟเฟกต์เรืองแสงและขยับเบาๆ ขณะกำลังส่งเสียงเตือนหรือพูดบอกเวลา */
+.clock-card.is-announcing {
+  animation: speakingPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes speakingPulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+  }
+  100% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.95));
+  }
+}
+
 .time-wrapper {
   display: flex;
   align-items: baseline;
@@ -414,6 +430,41 @@ body.is-overlay .modal-backdrop {
   font-size: 11px;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* 1-Click Theme Presets Grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.btn-preset {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-main);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.btn-preset:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.btn-preset:active {
+  transform: translateY(1px);
 }
 
 /* Form Sections */

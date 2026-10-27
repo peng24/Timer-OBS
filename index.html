@@ -97,6 +97,19 @@
           <div class="preview-hint">💡 ตัวอย่างนี้และนาฬิกาบนหน้าจอหลักจะเปลี่ยนแบบ Real-time ทันทีเมื่อปรับค่าด้านล่าง</div>
         </div>
 
+        <!-- ธีมสำเร็จรูป (1-Click Theme Presets) -->
+        <div class="form-section">
+          <div class="section-label">🎨 ธีมสำเร็จรูป (1-Click Theme Presets)</div>
+          <div class="preset-grid">
+            <button type="button" class="btn-preset" data-preset="modern_dark">✨ Modern Dark</button>
+            <button type="button" class="btn-preset" data-preset="cyberpunk">⚡ Cyberpunk Neon</button>
+            <button type="button" class="btn-preset" data-preset="pastel_cute">🌸 Pastel Cute</button>
+            <button type="button" class="btn-preset" data-preset="minimal_clean">🌿 Minimal Clean</button>
+            <button type="button" class="btn-preset" data-preset="gold_luxury">🔥 Gold Luxury</button>
+            <button type="button" class="btn-preset" data-preset="pure_overlay">👻 Pure Overlay (ไร้กรอบ)</button>
+          </div>
+        </div>
+
         <!-- รูปแบบเวลา & วันที่ -->
         <div class="form-section">
           <div class="section-label">🕒 รูปแบบเวลา & วันที่</div>
@@ -226,6 +239,17 @@
             </div>
             <label class="switch">
               <input type="checkbox" id="setting-text-shadow">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group row">
+            <div>
+              <label>เอฟเฟกต์เรืองแสงขณะพูดเตือน (Speaking Pulse)</label>
+              <div class="sub-label">กรอบเวลาจะเรืองแสงและขยับเบาๆ ขณะส่งเสียงเตือนหรืออ่านเวลา</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-speaking-pulse" checked>
               <span class="slider"></span>
             </label>
           </div>
@@ -405,16 +429,16 @@
       <!-- TAB 4: นำเข้า / ส่งออก -->
       <section class="tab-pane" id="tab-system">
         <div class="form-section">
-          <div class="section-label">OBS Browser Source Setup</div>
+          <div class="section-label">OBS Browser Source Setup (ซิงค์อัตโนมัติ)</div>
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            ก๊อปปี้ลิงก์นี้ไปใส่ใน <strong>Browser Source</strong> ของ OBS Studio เพื่อให้แสดงผลแบบ Overlay โปร่งใส ไม่มีปุ่มรบกวนหน้าจอ:
+            ก๊อปปี้ลิงก์นี้ไปใส่ใน <strong>Browser Source</strong> ของ OBS Studio โดยลิงก์นี้จะ<strong>แนบค่าสี ฟอนต์ และกฎทั้งหมดที่คุณตั้งไว้ไปให้ OBS อัตโนมัติ</strong>:
           </p>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <input type="text" id="obs-url-input" readonly style="flex: 1; font-size: 12px;">
             <button class="btn-ctrl" id="btn-copy-obs-tab">คัดลอก</button>
           </div>
           <p style="font-size: 12px; color: #38bdf8; margin-top: 6px;">
-            💡 <em>สำคัญใน OBS:</em> ติ๊กเลือก <strong>"Control audio via OBS"</strong> ใน Browser Source เพื่อให้เสียงพูดและเสียงเตือนส่งต่อไปยัง Audio Mixer
+            💡 <em>สำคัญใน OBS:</em> ติ๊กเลือก <strong>"Control audio via OBS"</strong> ใน Browser Source เพื่อให้เสียงพูดและเสียงเตือนส่งต่อไปยัง Audio Mixer (หากปรับแต่งค่าใหม่บนเว็บ ให้กดก๊อปปี้ลิงก์ไปวางใน OBS อีกครั้งเพื่ออัปเดตค่า)
           </p>
         </div>
 
@@ -471,12 +495,20 @@
       <div class="form-group" id="modal-group-interval">
         <label>เตือนทุก ๆ (นาที)</label>
         <select id="modal-rule-interval">
-          <option value="15">ทุก 15 นาที (นาทีที่ 0, 15, 30, 45)</option>
-          <option value="30">ทุก 30 นาที (นาทีที่ 0, 30)</option>
-          <option value="60" selected>ทุก 60 นาที (ทุกต้นชั่วโมง)</option>
-          <option value="10">ทุก 10 นาที</option>
           <option value="5">ทุก 5 นาที (สำหรับทดสอบ)</option>
+          <option value="10">ทุก 10 นาที</option>
+          <option value="15">ทุก 15 นาที (นาทีที่ 0, 15, 30, 45)</option>
+          <option value="20">ทุก 20 นาที (นาทีที่ 0, 20, 40)</option>
+          <option value="30">ทุก 30 นาที (นาทีที่ 0, 30)</option>
+          <option value="45">ทุก 45 นาที</option>
+          <option value="60" selected>ทุก 60 นาที (ทุกต้นชั่วโมง)</option>
+          <option value="90">ทุก 90 นาที (1 ชั่วโมงครึ่ง)</option>
+          <option value="120">ทุก 120 นาที (2 ชั่วโมง)</option>
+          <option value="custom">✏️ กำหนดจำนวนนาทีเอง...</option>
         </select>
+        <div id="modal-group-custom-interval" style="display: none; margin-top: 8px;">
+          <input type="number" id="modal-rule-custom-interval" min="1" max="1440" value="25" placeholder="ระบุจำนวนนาที เช่น 25" style="width: 100%;">
+        </div>
       </div>
 
       <div class="form-group" id="modal-group-specific" style="display: none;">

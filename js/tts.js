@@ -8,6 +8,8 @@ class ThaiTTSEngine {
     this.voices = [];
     this.selectedVoice = null;
     this.isSpeaking = false;
+    this.ruleQueue = [];
+    this.isProcessingQueue = false;
     this.lastTriggeredMinute = {}; // เก็บ timestamp ล่าสุดที่ trigger แต่ละ rule เพื่อป้องกัน trigger ซ้ำในนาทีเดียวกัน
 
     this.initVoices();
@@ -245,43 +247,95 @@ class ThaiTTSEngine {
   }
 
   /**
+   * เปิด/ปิดเอฟเฟกต์เรืองแสงขณะกำลังพูดบอกเวลาหรือส่งเสียงเตือน (Speaking Visual Pulse)
+   */
+  setAnnouncingVisual(active) {
+    const pulseEnabled = window.storageManager?.settings?.style?.speakingPulse !== false;
+    const cards = document.querySelectorAll('.clock-card');
+    cards.forEach(card => {
+      if (active && pulseEnabled) {
+        card.classList.add('is-announcing');
+      } else {
+        card.classList.remove('is-announcing');
+      }
+    });
+  }
+
+  /**
    * สั่งอ่านข้อความตาม Engine ที่ผู้ใช้เลือก
    */
-  speakText(text) {
+  async speakText(text) {
+    if (this.isMuted() || !text) return;
     const audioSettings = window.storageManager?.settings?.audio || {};
     const engine = audioSettings.ttsEngine || 'google';
 
-    if (engine === 'browser') {
-      return this.speakBrowserSpeech(text);
-    } else {
-      // Default: Google TTS ฟรี เป็นธรรมชาติที่สุด
-      return this.speakGoogleTTS(text);
+    this.setAnnouncingVisual(true);
+    try {
+      if (engine === 'browser') {
+        await this.speakBrowserSpeech(text);
+      } else {
+        // Default: Google TTS ฟรี เป็นธรรมชาติที่สุด
+        await this.speakGoogleTTS(text);
+      }
+    } finally {
+      if (!this.isProcessingQueue) {
+        this.setAnnouncingVisual(false);
+      }
     }
   }
 
   /**
-   * ประมวลผล Rule: เล่นเสียงเตือน และ/หรือ อ่านข้อความ
+   * นำ Rule เข้าคิวเพื่อป้องกันเสียงทับซ้อนกันเมื่อมีหลายกฎเตือนในนาทีเดียวกัน
    */
-  async triggerRule(rule, date = new Date()) {
-    if (this.isMuted() || !rule.enabled) return;
+  triggerRule(rule, date = new Date()) {
+    if (this.isMuted() || !rule.enabled) return Promise.resolve();
 
-    const mode = rule.mode || 'both'; // 'alarm', 'tts', 'both'
-    const soundEffect = rule.soundEffect || 'chime';
-    const message = this.formatMessage(rule.messageTemplate || 'ขณะนี้เวลา {time}', date);
+    return new Promise((resolve) => {
+      this.ruleQueue.push({ rule, date, resolve });
+      this.processQueue();
+    });
+  }
 
-    if (mode === 'alarm') {
-      // เสียงปลุกอย่างเดียว
-      await window.soundEngine.play(soundEffect, rule.customAudioUrl);
-    } else if (mode === 'tts') {
-      // อ่านเวลาอย่างเดียว
-      await this.speakText(message);
-    } else {
-      // ทั้งสองอย่าง: เล่นเสียงเตือนนำก่อน จากนั้นจึงอ่านเวลา
-      await window.soundEngine.play(soundEffect, rule.customAudioUrl);
-      // รอเล็กน้อยให้เสียงระฆัง/กระดิ่งจางลงอย่างเป็นธรรมชาติ
-      await new Promise(r => setTimeout(r, 200));
-      await this.speakText(message);
+  /**
+   * ประมวลผลคิวเสียงเตือนและคำพูดทีละรายการจนครบ
+   */
+  async processQueue() {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.ruleQueue.length > 0) {
+      const { rule, date, resolve } = this.ruleQueue.shift();
+      try {
+        if (!this.isMuted() && rule.enabled) {
+          this.setAnnouncingVisual(true);
+          const mode = rule.mode || 'both'; // 'alarm', 'tts', 'both'
+          const soundEffect = rule.soundEffect || 'chime';
+          const message = this.formatMessage(rule.messageTemplate || 'ขณะนี้เวลา {time}', date);
+
+          if (mode === 'alarm') {
+            await window.soundEngine.play(soundEffect, rule.customAudioUrl);
+          } else if (mode === 'tts') {
+            await this.speakText(message);
+          } else {
+            await window.soundEngine.play(soundEffect, rule.customAudioUrl);
+            await new Promise(r => setTimeout(r, 250));
+            await this.speakText(message);
+          }
+        }
+      } catch (err) {
+        console.warn('Error processing rule in queue:', err);
+      } finally {
+        resolve();
+      }
+
+      // หากยังมีรายการถัดไปในคิว ให้เว้นจังหวะ 800ms อย่างเป็นธรรมชาติก่อนเริ่มพูดรายการถัดไป
+      if (this.ruleQueue.length > 0) {
+        await new Promise(r => setTimeout(r, 800));
+      }
     }
+
+    this.isProcessingQueue = false;
+    this.setAnnouncingVisual(false);
   }
 
   /**
@@ -311,9 +365,16 @@ class ThaiTTSEngine {
 
       if (rule.type === 'interval') {
         const interval = parseInt(rule.intervalMinutes, 10) || 60;
-        // เช็คการหารลงตัวของจำนวนนาทีในรอบชั่วโมง (เช่น ทุก 15, 30, 60 นาที)
-        if (currentMinute % interval === 0) {
-          shouldTrigger = true;
+        if (interval <= 60 && 60 % interval === 0) {
+          // เช่น ทุก 5, 10, 15, 20, 30, 60 นาที (ตรงรอบนาทีของชั่วโมง)
+          if (currentMinute % interval === 0) {
+            shouldTrigger = true;
+          }
+        } else {
+          // เช่น ทุก 45, 90, 120 นาที (คำนวณจากนาทีรวมของวัน)
+          if (totalMinutes % interval === 0) {
+            shouldTrigger = true;
+          }
         }
       } else if (rule.type === 'specific') {
         if (rule.time === minuteKey) {
