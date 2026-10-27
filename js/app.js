@@ -440,6 +440,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // สร้างตัวเลือกเวลาแบบ 24 ชั่วโมง (00:00 - 23:59)
+  function initTimeDropdowns() {
+    const hourSelect = document.getElementById('modal-rule-hour');
+    const minuteSelect = document.getElementById('modal-rule-minute');
+    if (!hourSelect || !minuteSelect) return;
+
+    hourSelect.innerHTML = '';
+    for (let h = 0; h < 24; h++) {
+      const val = h.toString().padStart(2, '0');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = `${val} นาฬิกา (${val}:00)`;
+      hourSelect.appendChild(opt);
+    }
+
+    minuteSelect.innerHTML = '';
+    for (let m = 0; m < 60; m++) {
+      const val = m.toString().padStart(2, '0');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = `${val} นาที`;
+      minuteSelect.appendChild(opt);
+    }
+  }
+
   // 6. จัดการ Modal เพิ่ม / แก้ไขกฎ
   function openRuleModal(ruleId = null) {
     const isEdit = !!ruleId;
@@ -452,7 +477,13 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('modal-rule-name').value = rule.name || '';
       document.getElementById('modal-rule-type').value = rule.type || 'interval';
       document.getElementById('modal-rule-interval').value = rule.intervalMinutes || 60;
-      document.getElementById('modal-rule-time').value = rule.time || '12:00';
+      
+      const timeParts = (rule.time || '12:00').split(':');
+      const hourVal = (timeParts[0] || '12').padStart(2, '0');
+      const minVal = (timeParts[1] || '00').padStart(2, '0');
+      if (document.getElementById('modal-rule-hour')) document.getElementById('modal-rule-hour').value = hourVal;
+      if (document.getElementById('modal-rule-minute')) document.getElementById('modal-rule-minute').value = minVal;
+
       document.getElementById('modal-rule-mode').value = rule.mode || 'both';
       document.getElementById('modal-rule-sound').value = rule.soundEffect || 'chime';
       document.getElementById('modal-rule-custom-url').value = rule.customAudioUrl || '';
@@ -461,7 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('modal-rule-name').value = 'เตือนเวลาใหม่';
       document.getElementById('modal-rule-type').value = 'interval';
       document.getElementById('modal-rule-interval').value = '60';
-      document.getElementById('modal-rule-time').value = '12:00';
+      
+      if (document.getElementById('modal-rule-hour')) document.getElementById('modal-rule-hour').value = '12';
+      if (document.getElementById('modal-rule-minute')) document.getElementById('modal-rule-minute').value = '00';
+
       document.getElementById('modal-rule-mode').value = 'both';
       document.getElementById('modal-rule-sound').value = 'chime';
       document.getElementById('modal-rule-custom-url').value = '';
@@ -500,7 +534,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = document.getElementById('modal-rule-name').value.trim() || 'การเตือนเวลา';
     const type = document.getElementById('modal-rule-type').value;
     const intervalMinutes = parseInt(document.getElementById('modal-rule-interval').value, 10) || 60;
-    const time = document.getElementById('modal-rule-time').value || '12:00';
+    
+    // เวลาแบบ 24 ชั่วโมง (HH:MM)
+    const hour = (document.getElementById('modal-rule-hour')?.value || '12').padStart(2, '0');
+    const minute = (document.getElementById('modal-rule-minute')?.value || '00').padStart(2, '0');
+    const time = `${hour}:${minute}`;
+
     const mode = document.getElementById('modal-rule-mode').value;
     const soundEffect = document.getElementById('modal-rule-sound').value;
     const customAudioUrl = document.getElementById('modal-rule-custom-url').value.trim();
@@ -913,6 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 10. Start Clock & Initial Render
+  initTimeDropdowns();
   syncSettingsToUI();
   applyStyles();
   window.clockEngine.init(clockTime, clockPeriod, clockDate, clockCard);
