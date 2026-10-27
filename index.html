@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timer OBS - แสดงเวลาปัจจุบัน & เสียงอ่านเวลาไทยฟรี</title>
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- CLOCK DISPLAY VIEWPORT -->
+  <main class="clock-viewport">
+    <div class="clock-card" id="clock-card">
+      <div class="time-wrapper">
+        <span class="clock-time" id="clock-time">00:00:00</span>
+        <span class="clock-period" id="clock-period"></span>
+      </div>
+      <div class="clock-date" id="clock-date">กำลังโหลดเวลา...</div>
+    </div>
+  </main>
+
+  <!-- FLOATING QUICK CONTROLS (Hidden in OBS Overlay Mode) -->
+  <nav class="floating-controls" id="floating-controls">
+    <button class="btn-ctrl btn-mute" id="btn-quick-mute" title="ปิด/เปิดเสียงทั้งหมด (กดคีย์ลัด M)">
+      <span id="mute-icon">🔊</span>
+      <span id="mute-text">เปิดเสียงอยู่</span>
+    </button>
+    <button class="btn-ctrl" id="btn-quick-test" title="ทดสอบเสียงปลุกและเสียงพูด">
+      <span>🔔</span>
+      <span>ทดสอบเสียง</span>
+    </button>
+    <button class="btn-ctrl" id="btn-copy-obs" title="คัดลอกลิงก์สำหรับใส่ใน OBS Browser Source">
+      <span>📋</span>
+      <span>ก๊อปปี้ลิงก์ OBS</span>
+    </button>
+    <button class="btn-ctrl btn-primary" id="btn-open-settings" title="เปิดหน้าต่างตั้งค่า">
+      <span>⚙️</span>
+      <span>ตั้งค่า</span>
+    </button>
+  </nav>
+
+  <!-- SETTINGS DRAWER BACKDROP -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <!-- SETTINGS DRAWER -->
+  <aside class="settings-drawer" id="settings-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <span>⚙️ ตั้งค่านาฬิกา & ระบบเสียง</span>
+      </div>
+      <button class="btn-close" id="btn-close-settings" title="ปิดหน้าต่าง">✕</button>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-style">🎨 แสดงผล & สไตล์</button>
+      <button class="tab-btn" data-tab="tab-audio">🔊 เสียง & TTS</button>
+      <button class="tab-btn" data-tab="tab-rules">⏰ กฎเตือน / ปลุก</button>
+      <button class="tab-btn" data-tab="tab-system">💾 นำเข้า / ส่งออก</button>
+    </div>
+
+    <!-- DRAWER BODY -->
+    <div class="drawer-body">
+      
+      <!-- TAB 1: แสดงผล & สไตล์ -->
+      <section class="tab-pane active" id="tab-style">
+        
+        <!-- LIVE PREVIEW CONTAINER -->
+        <div class="live-preview-widget">
+          <div class="live-preview-header">
+            <span class="preview-title">📺 ตัวอย่างการแสดงผลจริง (Live Preview)</span>
+            <div class="preview-bg-switches" title="เปลี่ยนพื้นหลังจำลองเพื่อดูความคมชัด">
+              <button type="button" class="btn-bg-preview active" data-bg="checker" title="พื้นหลังโปร่งใส (Checkerboard)">🏁 โปร่งใส</button>
+              <button type="button" class="btn-bg-preview" data-bg="dark" title="พื้นหลังมืด">⬛ มืด</button>
+              <button type="button" class="btn-bg-preview" data-bg="light" title="พื้นหลังสว่าง">⬜ สว่าง</button>
+              <button type="button" class="btn-bg-preview" data-bg="game" title="จำลองฉากเกมสตรีม">🎮 ฉากเกม</button>
+            </div>
+          </div>
+          <div class="live-preview-stage preview-bg-checker" id="live-preview-stage">
+            <div class="clock-card" id="preview-clock-card">
+              <div class="time-wrapper">
+                <span class="clock-time preview-time" id="preview-clock-time">00:00:00</span>
+                <span class="clock-period preview-period" id="preview-clock-period"></span>
+              </div>
+              <div class="clock-date preview-date" id="preview-clock-date">กำลังโหลดเวลา...</div>
+            </div>
+          </div>
+          <div class="preview-hint">💡 ตัวอย่างนี้และนาฬิกาบนหน้าจอหลักจะเปลี่ยนแบบ Real-time ทันทีเมื่อปรับค่าด้านล่าง</div>
+        </div>
+
+        <!-- รูปแบบเวลา & วันที่ -->
+        <div class="form-section">
+          <div class="section-label">🕒 รูปแบบเวลา & วันที่</div>
+          
+          <div class="form-group row">
+            <div>
+              <label>รูปแบบ 12 ชั่วโมง (AM / PM)</label>
+              <div class="sub-label">เปิดเพื่อแสดงแบบ 12 ชม. ปิดเพื่อแสดงแบบ 24 ชม.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-format12">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group row">
+            <div>
+              <label>แสดงวินาที (:SS)</label>
+              <div class="sub-label">เปิด/ปิดการแสดงวินาที</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-show-seconds">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group row">
+            <div>
+              <label>แสดงวันที่</label>
+              <div class="sub-label">แสดงวันที่ใต้ตัวเลขเวลา</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-show-date">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group" id="group-date-format">
+            <label>รูปแบบวันที่</label>
+            <select id="setting-date-format">
+              <option value="long">วันอังคารที่ 27 ตุลาคม 2569 (ไทยเต็ม)</option>
+              <option value="short">27 ต.ค. 69 (ไทยย่อ)</option>
+              <option value="en">Tuesday, 27 Oct 2026 (English)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ฟอนต์ตัวอักษร (Google Fonts) -->
+        <div class="form-section">
+          <div class="section-label">🔤 แบบตัวอักษร (Google Fonts)</div>
+          
+          <div class="form-group">
+            <label>เลือกฟอนต์ Google Fonts ภาษาไทย</label>
+            <select id="setting-font-family"></select>
+          </div>
+
+          <div class="form-group" id="group-custom-font" style="display: none;">
+            <label>ระบุชื่อฟอนต์จาก Google Fonts</label>
+            <input type="text" id="setting-custom-font" placeholder="เช่น Mali, Niramit, Orbitron">
+          </div>
+
+          <div class="form-group">
+            <label>ขนาดตัวอักษร (Font Size)</label>
+            <div class="range-wrapper">
+              <input type="range" id="setting-font-size" min="24" max="160" step="2">
+              <span class="range-val" id="val-font-size">72px</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>ความหนาตัวอักษร (Font Weight)</label>
+            <select id="setting-font-weight">
+              <option value="300">Light (300)</option>
+              <option value="400">Regular (400)</option>
+              <option value="500">Medium (500)</option>
+              <option value="600">Semi-Bold (600)</option>
+              <option value="700">Bold (700)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- สี & เอฟเฟกต์ตัวอักษร (สำหรับ OBS) -->
+        <div class="form-section">
+          <div class="section-label">✨ สี & ขอบตัวอักษร</div>
+
+          <div class="form-group row">
+            <label>สีข้อความ (Text Color)</label>
+            <div class="color-picker-row">
+              <input type="color" id="setting-text-color">
+              <input type="text" id="setting-text-color-hex" style="width: 85px; text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div>
+              <label>ขอบตัวหนังสือ (Text Stroke)</label>
+              <div class="sub-label">ช่วยให้อ่านง่ายขึ้นบนทุกฉากของ OBS</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-text-stroke">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="group-stroke-options">
+            <div class="form-group row">
+              <label>สีขอบตัวหนังสือ</label>
+              <div class="color-picker-row">
+                <input type="color" id="setting-stroke-color">
+                <input type="text" id="setting-stroke-color-hex" style="width: 85px; text-transform: uppercase;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ความหนาขอบ</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-stroke-width" min="1" max="10" step="0.5">
+                <span class="range-val" id="val-stroke-width">3px</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div>
+              <label>เงาตัวหนังสือ (Text Shadow)</label>
+              <div class="sub-label">เพิ่มมิติและความคมชัด</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-text-shadow">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- พื้นหลังและการจัดวาง -->
+        <div class="form-section">
+          <div class="section-label">🖼️ พื้นหลัง & กล่องครอบ</div>
+
+          <div class="form-group row">
+            <div>
+              <label>พื้นหลังโปร่งใส 100%</label>
+              <div class="sub-label">ไม่มีกล่องพื้นหลัง แสดงเฉพาะข้อความ</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-bg-transparent">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="group-bg-options">
+            <div class="form-group row">
+              <label>สีพื้นหลังกล่อง</label>
+              <div class="color-picker-row">
+                <input type="color" id="setting-bg-color">
+                <input type="text" id="setting-bg-color-hex" style="width: 85px; text-transform: uppercase;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ความทึบของพื้นหลัง (Opacity)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-bg-opacity" min="0" max="1" step="0.05">
+                <span class="range-val" id="val-bg-opacity">75%</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ความโค้งมนของขอบกล่อง (Border Radius)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-border-radius" min="0" max="60" step="2">
+                <span class="range-val" id="val-border-radius">20px</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ระยะขอบใน (Padding แนวนอน / แนวตั้ง)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-padding-x" min="8" max="80" step="4">
+                <span class="range-val" id="val-padding-x">36px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TAB 2: เสียง & การอ่านเวลา -->
+      <section class="tab-pane" id="tab-audio">
+        
+        <!-- ควบคุมเสียงหลัก & Mute All -->
+        <div class="form-section">
+          <div class="section-label">🔇 การควบคุมเสียงหลัก</div>
+          
+          <div class="form-group row">
+            <div>
+              <label style="font-size: 14px; font-weight: 600;">ปิดเสียงทั้งหมด (Master Mute)</label>
+              <div class="sub-label">ระงับทั้งเสียงนาฬิกาปลุกและเสียงอ่านเวลา TTS ทั้งหมด (คีย์ลัด M)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-master-mute">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ระดับเสียงเอฟเฟกต์ปลุก -->
+        <div class="form-section">
+          <div class="section-label">⏰ เสียงเอฟเฟกต์นาฬิกาปลุก & เตือน</div>
+
+          <div class="form-group">
+            <label>ระดับเสียงเอฟเฟกต์ปลุก (Alarm Volume)</label>
+            <div class="range-wrapper">
+              <input type="range" id="setting-alarm-volume" min="0" max="1" step="0.05">
+              <span class="range-val" id="val-alarm-volume">80%</span>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <label>ทดลองฟังเสียงเตือน</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="quick-sound-preview" style="width: 140px;">
+                <option value="chime">🔔 Chime</option>
+                <option value="digital">⏰ Digital Alarm</option>
+                <option value="dingdong">🎵 Ding-Dong</option>
+                <option value="marimba">🎶 Marimba</option>
+                <option value="bell">🕰️ Clock Bell</option>
+              </select>
+              <button class="btn-ctrl" id="btn-play-preview-sound">▶ เล่น</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- การอ่านเวลา TTS ภาษาไทย -->
+        <div class="form-section">
+          <div class="section-label">🗣️ ระบบอ่านเวลาภาษาไทย (Thai TTS)</div>
+
+          <div class="form-group">
+            <label>เครื่องยนต์เสียงพากย์ (TTS Engine)</label>
+            <select id="setting-tts-engine">
+              <option value="google" selected>🌐 Google TTS (แนะนำ - เสียงกูเกิลแท้ ชัดเจน เป็นธรรมชาติที่สุด)</option>
+              <option value="browser">💻 Browser Web Speech (เสียงในระบบเครื่อง / Edge Natural / Chrome)</option>
+            </select>
+          </div>
+
+          <div id="google-tts-badge" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); padding: 10px 14px; border-radius: 8px; font-size: 12px; color: #93c5fd; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+            <span style="font-size: 15px;">✨</span>
+            <span>กำลังใช้ <strong>Google Translate Thai Voice</strong> เสียงพูดภาษาไทยสำเนียงธรรมชาติ คมชัด ไม่ต้องใช้ API Key และฟรี 100%</span>
+          </div>
+
+          <div class="form-group" style="margin-top: 6px;">
+            <label>ระดับเสียงพูด (TTS Volume)</label>
+            <div class="range-wrapper">
+              <input type="range" id="setting-tts-volume" min="0" max="1" step="0.05">
+              <span class="range-val" id="val-tts-volume">100%</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>ความเร็วการอ่าน (Speech Rate)</label>
+            <div class="range-wrapper">
+              <input type="range" id="setting-tts-rate" min="0.5" max="2" step="0.1">
+              <span class="range-val" id="val-tts-rate">1.0x</span>
+            </div>
+          </div>
+
+          <div id="group-browser-voice" style="display: none; flex-direction: column; gap: 12px;">
+            <div class="form-group">
+              <label>โทนเสียงสูง/ต่ำ (Speech Pitch)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-tts-pitch" min="0.5" max="1.5" step="0.1">
+                <span class="range-val" id="val-tts-pitch">1.0</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>เลือกเสียงผู้พากย์ในเครื่อง (Voice Engine)</label>
+              <select id="setting-tts-voice"></select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 8px;">
+            <button class="btn-ctrl" id="btn-test-tts-speech" style="width: 100%; justify-content: center;">
+              🗣️ ทดสอบอ่านเวลาปัจจุบัน
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TAB 3: กฎการเตือน / ปลุก -->
+      <section class="tab-pane" id="tab-rules">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; font-size: 15px;">รายการกฎการเตือน / อ่านเวลา</div>
+            <div class="sub-label">เพิ่ม ลบ หรือแก้ไขรอบการอ่านเวลาและเสียงปลุกได้อย่างอิสระ</div>
+          </div>
+          <button class="btn-ctrl btn-primary" id="btn-add-rule">+ เพิ่มกฎใหม่</button>
+        </div>
+
+        <!-- Rule Cards Container -->
+        <div id="rules-list-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+          <!-- Dynamically generated via app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 4: นำเข้า / ส่งออก -->
+      <section class="tab-pane" id="tab-system">
+        <div class="form-section">
+          <div class="section-label">OBS Browser Source Setup</div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            ก๊อปปี้ลิงก์นี้ไปใส่ใน <strong>Browser Source</strong> ของ OBS Studio เพื่อให้แสดงผลแบบ Overlay โปร่งใส ไม่มีปุ่มรบกวนหน้าจอ:
+          </p>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <input type="text" id="obs-url-input" readonly style="flex: 1; font-size: 12px;">
+            <button class="btn-ctrl" id="btn-copy-obs-tab">คัดลอก</button>
+          </div>
+          <p style="font-size: 12px; color: #38bdf8; margin-top: 6px;">
+            💡 <em>สำคัญใน OBS:</em> ติ๊กเลือก <strong>"Control audio via OBS"</strong> ใน Browser Source เพื่อให้เสียงพูดและเสียงเตือนส่งต่อไปยัง Audio Mixer
+          </p>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">สำรอง & กู้คืนการตั้งค่า</div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-ctrl" id="btn-export-settings" style="flex: 1; justify-content: center;">
+              📤 ส่งออก (Export JSON)
+            </button>
+            <button class="btn-ctrl" id="btn-import-trigger" style="flex: 1; justify-content: center;">
+              📥 นำเข้า (Import JSON)
+            </button>
+            <input type="file" id="file-import-input" accept=".json" style="display: none;">
+          </div>
+        </div>
+
+        <div class="form-section" style="border-color: rgba(239, 68, 68, 0.3);">
+          <div class="section-label" style="color: var(--accent-red);">รีเซ็ตการตั้งค่า</div>
+          <p style="font-size: 12px; color: var(--text-muted);">
+            ล้างการตั้งค่าและกฎทั้งหมดกลับเป็นค่าเริ่มต้นจากโรงงาน
+          </p>
+          <button class="btn-ctrl" id="btn-reset-settings" style="background: rgba(239, 68, 68, 0.15); border-color: var(--accent-red); color: #fca5a5; margin-top: 6px;">
+            ⚠️ รีเซ็ตเป็นค่าเริ่มต้น
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+
+  <!-- MODAL: ADD / EDIT RULE -->
+  <div class="drawer-backdrop" id="rule-modal-backdrop" style="z-index: 150;"></div>
+  <div class="settings-drawer" id="rule-modal" style="z-index: 151; width: 440px;">
+    <div class="drawer-header">
+      <div class="drawer-title" id="rule-modal-title">⏰ เพิ่มกฎการเตือนเวลา</div>
+      <button class="btn-close" id="btn-close-rule-modal">✕</button>
+    </div>
+    <div class="drawer-body" style="gap: 16px; display: flex; flex-direction: column;">
+      <input type="hidden" id="modal-rule-id">
+
+      <div class="form-group">
+        <label>ชื่อกฎการเตือน</label>
+        <input type="text" id="modal-rule-name" placeholder="เช่น เตือนทุกชั่วโมง, พักสายตา">
+      </div>
+
+      <div class="form-group">
+        <label>ประเภทเวลาที่ต้องการเตือน</label>
+        <select id="modal-rule-type">
+          <option value="interval">ตามช่วงเวลาสม่ำเสมอ (ทุก ๆ XX นาที)</option>
+          <option value="specific">ตามเวลาเจาะจง (เช่น 12:00, 18:00)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="modal-group-interval">
+        <label>เตือนทุก ๆ (นาที)</label>
+        <select id="modal-rule-interval">
+          <option value="15">ทุก 15 นาที (นาทีที่ 0, 15, 30, 45)</option>
+          <option value="30">ทุก 30 นาที (นาทีที่ 0, 30)</option>
+          <option value="60" selected>ทุก 60 นาที (ทุกต้นชั่วโมง)</option>
+          <option value="10">ทุก 10 นาที</option>
+          <option value="5">ทุก 5 นาที (สำหรับทดสอบ)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="modal-group-specific" style="display: none;">
+        <label>ระบุเวลาที่ต้องการเตือน (HH:MM)</label>
+        <input type="time" id="modal-rule-time" value="12:00">
+      </div>
+
+      <div class="form-group">
+        <label>รูปแบบการส่งเสียง</label>
+        <select id="modal-rule-mode">
+          <option value="both" selected>🔔+🗣️ เสียงเตือนนำ แล้วตามด้วยอ่านเวลา</option>
+          <option value="alarm">🔔 เล่นเสียงเอฟเฟกต์ปลุกอย่างเดียว</option>
+          <option value="tts">🗣️ อ่านเวลาอย่างเดียว (ไม่มีเสียงปลุกนำ)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="modal-group-sound">
+        <label>เลือกเสียงเอฟเฟกต์ปลุก</label>
+        <select id="modal-rule-sound">
+          <option value="bell">🕰️ Clock Bell (ระฆังนาฬิกา)</option>
+          <option value="chime">🔔 Chime (กระดิ่งกังวาน นุ่มนวล)</option>
+          <option value="digital">⏰ Digital Alarm (บี๊บๆ นาฬิกาดิจิทัล)</option>
+          <option value="dingdong">🎵 Ding-Dong (ติ๊งต่องสองโทน)</option>
+          <option value="marimba">🎶 Marimba (มาริมบาโมเดิร์น)</option>
+          <option value="custom">📁 Custom (ไฟล์เสียง URL)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="modal-group-custom-sound" style="display: none;">
+        <label>URL ไฟล์เสียงกำหนดเอง (.mp3 / .wav)</label>
+        <input type="text" id="modal-rule-custom-url" placeholder="https://example.com/sound.mp3">
+      </div>
+
+      <div class="form-group" id="modal-group-message">
+        <label>ข้อความที่ให้อ่าน</label>
+        <textarea id="modal-rule-message" rows="3" placeholder="ขณะนี้เวลา {time} ค่ะ"></textarea>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+          ตัวแปรที่ใช้ได้: <code style="color: #38bdf8;">{time}</code> (เวลาภาษาไทย), <code style="color: #38bdf8;">{date}</code> (วันที่ภาษาไทย), <code style="color: #38bdf8;">{hour}</code>, <code style="color: #38bdf8;">{minute}</code>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <button class="btn-ctrl" id="btn-modal-test" style="flex: 1; justify-content: center;">▶ ทดสอบ</button>
+        <button class="btn-ctrl btn-primary" id="btn-modal-save" style="flex: 2; justify-content: center;">💾 บันทึกกฎนี้</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="js/storage.js"></script>
+  <script src="js/sounds.js"></script>
+  <script src="js/fonts.js"></script>
+  <script src="js/tts.js"></script>
+  <script src="js/clock.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
