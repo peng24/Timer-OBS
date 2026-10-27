@@ -117,6 +117,14 @@ body.is-overlay .modal-backdrop {
   font-variant-numeric: tabular-nums;
 }
 
+.clock-seconds {
+  display: inline-block;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.02em;
+  transition: color 0.2s, opacity 0.2s, font-size 0.2s;
+}
+
 .clock-period {
   font-size: 0.38em;
   font-weight: 500;

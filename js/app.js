@@ -6,12 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const clockCard = document.getElementById('clock-card');
   const clockTime = document.getElementById('clock-time');
+  const clockSeconds = document.getElementById('clock-seconds');
   const clockPeriod = document.getElementById('clock-period');
   const clockDate = document.getElementById('clock-date');
 
   // Live Preview Elements
   const previewClockCard = document.getElementById('preview-clock-card');
   const previewClockTime = document.getElementById('preview-clock-time');
+  const previewClockSeconds = document.getElementById('preview-clock-seconds');
   const previewClockPeriod = document.getElementById('preview-clock-period');
   const previewClockDate = document.getElementById('preview-clock-date');
   const livePreviewStage = document.getElementById('live-preview-stage');
@@ -129,6 +131,33 @@ document.addEventListener('DOMContentLoaded', () => {
       clockDate.style.textShadow = 'none';
     }
 
+    // สไตล์เลขวินาทีบนหน้าจอหลัก (:SS)
+    const secCustom = s.secondsCustomStyle !== false;
+    const secScale = secCustom ? (s.secondsScale ?? 0.72) : 1.0;
+    const secColor = secCustom ? (s.secondsColor || '#94a3b8') : s.textColor;
+    const secOpacity = secCustom ? (s.secondsOpacity ?? 0.85) : 1.0;
+
+    if (clockSeconds) {
+      clockSeconds.style.fontSize = `${Math.max(16, Math.round(s.fontSize * secScale))}px`;
+      clockSeconds.style.fontWeight = s.fontWeight;
+      clockSeconds.style.letterSpacing = `${s.letterSpacing}px`;
+      clockSeconds.style.color = secColor;
+      clockSeconds.style.opacity = secOpacity;
+
+      if (s.textStroke) {
+        clockSeconds.style.webkitTextStroke = `${Math.max(0.5, s.strokeWidth * secScale)}px ${s.strokeColor}`;
+        clockSeconds.style.paintOrder = 'stroke fill';
+      } else {
+        clockSeconds.style.webkitTextStroke = 'none';
+      }
+
+      if (s.textShadow) {
+        clockSeconds.style.textShadow = `0 3px ${Math.round(s.shadowBlur * secScale)}px ${s.shadowColor}`;
+      } else {
+        clockSeconds.style.textShadow = 'none';
+      }
+    }
+
     clockDate.style.color = s.textColor;
     clockDate.style.fontSize = `${Math.max(14, Math.round(s.fontSize * 0.32))}px`;
     if (s.textStroke) {
@@ -172,6 +201,27 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         previewClockTime.style.textShadow = 'none';
         previewClockDate.style.textShadow = 'none';
+      }
+
+      if (previewClockSeconds) {
+        previewClockSeconds.style.fontSize = `${Math.max(12, Math.round(previewFontSize * secScale))}px`;
+        previewClockSeconds.style.fontWeight = s.fontWeight;
+        previewClockSeconds.style.letterSpacing = `${Math.round(s.letterSpacing * pScale)}px`;
+        previewClockSeconds.style.color = secColor;
+        previewClockSeconds.style.opacity = secOpacity;
+
+        if (s.textStroke) {
+          previewClockSeconds.style.webkitTextStroke = `${Math.max(0.4, s.strokeWidth * pScale * secScale)}px ${s.strokeColor}`;
+          previewClockSeconds.style.paintOrder = 'stroke fill';
+        } else {
+          previewClockSeconds.style.webkitTextStroke = 'none';
+        }
+
+        if (s.textShadow) {
+          previewClockSeconds.style.textShadow = `0 2px ${Math.round(s.shadowBlur * pScale * secScale)}px ${s.shadowColor}`;
+        } else {
+          previewClockSeconds.style.textShadow = 'none';
+        }
       }
 
       previewClockDate.style.color = s.textColor;
@@ -224,6 +274,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('setting-text-color').value = s.style.textColor;
     document.getElementById('setting-text-color-hex').value = s.style.textColor;
+
+    // Seconds Custom Style
+    const secCustomCheckbox = document.getElementById('setting-seconds-custom');
+    const secOptionsGroup = document.getElementById('group-seconds-options');
+    const isSecCustom = s.style.secondsCustomStyle !== false;
+    if (secCustomCheckbox) secCustomCheckbox.checked = isSecCustom;
+    if (secOptionsGroup) secOptionsGroup.style.display = isSecCustom ? 'flex' : 'none';
+
+    const secColor = s.style.secondsColor || '#94a3b8';
+    const secColorInput = document.getElementById('setting-seconds-color');
+    const secColorHex = document.getElementById('setting-seconds-color-hex');
+    if (secColorInput) secColorInput.value = secColor;
+    if (secColorHex) secColorHex.value = secColor;
+
+    const secOpacity = s.style.secondsOpacity ?? 0.85;
+    const secOpacityInput = document.getElementById('setting-seconds-opacity');
+    const secOpacityVal = document.getElementById('val-seconds-opacity');
+    if (secOpacityInput) secOpacityInput.value = secOpacity;
+    if (secOpacityVal) secOpacityVal.textContent = `${Math.round(secOpacity * 100)}%`;
+
+    const secScale = s.style.secondsScale ?? 0.72;
+    const secScaleInput = document.getElementById('setting-seconds-scale');
+    const secScaleVal = document.getElementById('val-seconds-scale');
+    if (secScaleInput) secScaleInput.value = secScale;
+    if (secScaleVal) secScaleVal.textContent = `${Math.round(secScale * 100)}%`;
 
     document.getElementById('setting-text-stroke').checked = !!s.style.textStroke;
     document.getElementById('group-stroke-options').style.display = s.style.textStroke ? 'block' : 'none';
@@ -728,6 +803,59 @@ document.addEventListener('DOMContentLoaded', () => {
       applyStyles();
     }
   });
+
+  // Seconds Custom Style (:SS)
+  const secCustomEl = document.getElementById('setting-seconds-custom');
+  if (secCustomEl) {
+    secCustomEl.addEventListener('change', (e) => {
+      window.storageManager.settings.style.secondsCustomStyle = e.target.checked;
+      const grp = document.getElementById('group-seconds-options');
+      if (grp) grp.style.display = e.target.checked ? 'flex' : 'none';
+      window.storageManager.save();
+      applyStyles();
+    });
+  }
+
+  const secColorInput = document.getElementById('setting-seconds-color');
+  const secColorHex = document.getElementById('setting-seconds-color-hex');
+  if (secColorInput && secColorHex) {
+    secColorInput.addEventListener('input', (e) => {
+      secColorHex.value = e.target.value;
+      window.storageManager.settings.style.secondsColor = e.target.value;
+      window.storageManager.save();
+      applyStyles();
+    });
+    secColorHex.addEventListener('input', (e) => {
+      if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+        secColorInput.value = e.target.value;
+        window.storageManager.settings.style.secondsColor = e.target.value;
+        window.storageManager.save();
+        applyStyles();
+      }
+    });
+  }
+
+  const secOpacitySlider = document.getElementById('setting-seconds-opacity');
+  if (secOpacitySlider) {
+    secOpacitySlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      document.getElementById('val-seconds-opacity').textContent = `${Math.round(val * 100)}%`;
+      window.storageManager.settings.style.secondsOpacity = val;
+      window.storageManager.save();
+      applyStyles();
+    });
+  }
+
+  const secScaleSlider = document.getElementById('setting-seconds-scale');
+  if (secScaleSlider) {
+    secScaleSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      document.getElementById('val-seconds-scale').textContent = `${Math.round(val * 100)}%`;
+      window.storageManager.settings.style.secondsScale = val;
+      window.storageManager.save();
+      applyStyles();
+    });
+  }
 
   // Text Stroke
   document.getElementById('setting-text-stroke').addEventListener('change', (e) => {

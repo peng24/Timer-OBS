@@ -21,7 +21,7 @@
   <main class="clock-viewport">
     <div class="clock-card" id="clock-card">
       <div class="time-wrapper">
-        <span class="clock-time" id="clock-time">00:00:00</span>
+        <span class="clock-time" id="clock-time">00:00</span><span class="clock-seconds" id="clock-seconds">:00</span>
         <span class="clock-period" id="clock-period"></span>
       </div>
       <div class="clock-date" id="clock-date">กำลังโหลดเวลา...</div>
@@ -88,7 +88,7 @@
           <div class="live-preview-stage preview-bg-checker" id="live-preview-stage">
             <div class="clock-card" id="preview-clock-card">
               <div class="time-wrapper">
-                <span class="clock-time preview-time" id="preview-clock-time">00:00:00</span>
+                <span class="clock-time preview-time" id="preview-clock-time">00:00</span><span class="clock-seconds preview-seconds" id="preview-clock-seconds">:00</span>
                 <span class="clock-period preview-period" id="preview-clock-period"></span>
               </div>
               <div class="clock-date preview-date" id="preview-clock-date">กำลังโหลดเวลา...</div>
@@ -196,10 +196,47 @@
           <div class="section-label">✨ สี & ขอบตัวอักษร</div>
 
           <div class="form-group row">
-            <label>สีข้อความ (Text Color)</label>
+            <label>สีข้อความหลัก (HH:MM & วันที่)</label>
             <div class="color-picker-row">
               <input type="color" id="setting-text-color">
               <input type="text" id="setting-text-color-hex" style="width: 85px; text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div class="form-group row" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+            <div>
+              <label>แยกสี & ลดความเด่นเลขวินาที (:SS)</label>
+              <div class="sub-label">ทำให้เลขวินาทีสีซอฟต์ลงและไม่แย่งสายตาจากเวลาหลัก</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-seconds-custom" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="group-seconds-options" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px;">
+            <div class="form-group row">
+              <label>สีเลขวินาที (Seconds Color)</label>
+              <div class="color-picker-row">
+                <input type="color" id="setting-seconds-color">
+                <input type="text" id="setting-seconds-color-hex" style="width: 85px; text-transform: uppercase;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ความชัดของเลขวินาที (Opacity)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-seconds-opacity" min="0.2" max="1" step="0.05">
+                <span class="range-val" id="val-seconds-opacity">85%</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>ขนาดเลขวินาทีเทียบกับเวลาหลัก (Scale)</label>
+              <div class="range-wrapper">
+                <input type="range" id="setting-seconds-scale" min="0.45" max="1" step="0.05">
+                <span class="range-val" id="val-seconds-scale">72%</span>
+              </div>
             </div>
           </div>
 

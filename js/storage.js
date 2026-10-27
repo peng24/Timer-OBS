@@ -34,6 +34,10 @@ const DEFAULT_SETTINGS = {
     borderColor: 'rgba(255, 255, 255, 0.15)',
     textAlign: 'center',
     speakingPulse: true,
+    secondsCustomStyle: true,
+    secondsColor: '#94a3b8',
+    secondsOpacity: 0.85,
+    secondsScale: 0.72,
   },
   audio: {
     masterMute: false,
@@ -105,6 +109,10 @@ const THEME_PRESETS = {
       borderRadius: 20,
       paddingX: 36,
       paddingY: 20,
+      secondsCustomStyle: true,
+      secondsColor: '#94a3b8',
+      secondsOpacity: 0.85,
+      secondsScale: 0.72,
     }
   },
   cyberpunk: {
@@ -127,6 +135,10 @@ const THEME_PRESETS = {
       borderRadius: 12,
       paddingX: 40,
       paddingY: 20,
+      secondsCustomStyle: true,
+      secondsColor: '#f43f5e',
+      secondsOpacity: 0.9,
+      secondsScale: 0.7,
     }
   },
   pastel_cute: {
@@ -149,6 +161,10 @@ const THEME_PRESETS = {
       borderRadius: 32,
       paddingX: 40,
       paddingY: 20,
+      secondsCustomStyle: true,
+      secondsColor: '#fbcfe8',
+      secondsOpacity: 0.85,
+      secondsScale: 0.72,
     }
   },
   minimal_clean: {
@@ -171,6 +187,10 @@ const THEME_PRESETS = {
       borderRadius: 16,
       paddingX: 32,
       paddingY: 16,
+      secondsCustomStyle: true,
+      secondsColor: '#94a3b8',
+      secondsOpacity: 0.75,
+      secondsScale: 0.72,
     }
   },
   gold_luxury: {
@@ -193,6 +213,10 @@ const THEME_PRESETS = {
       borderRadius: 24,
       paddingX: 40,
       paddingY: 20,
+      secondsCustomStyle: true,
+      secondsColor: '#fbbf24',
+      secondsOpacity: 0.75,
+      secondsScale: 0.7,
     }
   },
   pure_overlay: {
@@ -215,6 +239,10 @@ const THEME_PRESETS = {
       borderRadius: 20,
       paddingX: 24,
       paddingY: 16,
+      secondsCustomStyle: true,
+      secondsColor: '#cbd5e1',
+      secondsOpacity: 0.85,
+      secondsScale: 0.72,
     }
   }
 };

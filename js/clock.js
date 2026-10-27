@@ -67,15 +67,22 @@ class ClockEngine {
     }
     const hoursStr = hours.toString().padStart(2, '0');
 
-    // สร้าง Time String
-    let timeString = `${hoursStr}:${minutes}`;
-    if (settings.showSeconds) {
-      timeString += `:${seconds}`;
-    }
+    // สร้าง Time String (HH:MM) และ Seconds String (:SS) แยกกันเพื่อให้ปรับสี/ขนาดแยกได้
+    const hmString = `${hoursStr}:${minutes}`;
+    const secString = `:${seconds}`;
 
     // อัปเดตทั้งนาฬิกาหลักบนหน้าจอ และตัวอย่างพรีวิวในแผงตั้งค่า
     document.querySelectorAll('.clock-time').forEach(el => {
-      el.textContent = timeString;
+      el.textContent = hmString;
+    });
+
+    document.querySelectorAll('.clock-seconds').forEach(el => {
+      if (settings.showSeconds) {
+        el.textContent = secString;
+        el.style.display = 'inline-block';
+      } else {
+        el.style.display = 'none';
+      }
     });
 
     document.querySelectorAll('.clock-period').forEach(el => {
