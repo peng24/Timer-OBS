@@ -134,7 +134,7 @@ class ThaiTTSEngine {
 
   /**
    * สั่งอ่านข้อความผ่าน Google TTS ฟรี (ให้เสียงธรรมชาติและชัดเจนที่สุด)
-   * มีระบบสำรอง Fallback ไปยัง Web Speech API หากออฟไลน์
+   * รองรับ Cloudflare Edge Proxy เพื่อแก้ปัญหา CORS 100% พร้อมระบบ Fallback
    */
   speakGoogleTTS(text) {
     return new Promise((resolve) => {
@@ -149,12 +149,18 @@ class ThaiTTSEngine {
       const audioSettings = window.storageManager?.settings?.audio || {};
       const cleanText = text.trim();
 
-      // สร้าง URL สำหรับ Google Translate TTS API (tw-ob client ฟรี 100% ไม่ต้องใช้ API key)
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=th&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
-      
+      // เลือก URL: ถ้าอยู่บนเว็บ (Cloudflare / Localhost) ให้ใช้ Edge Proxy /api/tts เพื่อหลีกเลี่ยงปัญหา CORS
+      // ถ้าเปิดจากไฟล์ตรงๆ (file://) ให้ใช้ URL ของ Google Translate TTS โดยตรง
+      let url = '';
+      if (window.location.protocol.startsWith('http')) {
+        url = `${window.location.origin}/api/tts?text=${encodeURIComponent(cleanText)}`;
+      } else {
+        url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=th&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+      }
+
       const audio = new Audio();
       this.currentAudio = audio;
-      audio.crossOrigin = 'anonymous';
+      // ห้ามใส่ audio.crossOrigin = 'anonymous' เพราะจะบังคับ CORS preflight ซึ่ง Google บล็อก
 
       // ปรับระดับเสียงและความเร็ว
       audio.volume = audioSettings.ttsVolume ?? 1.0;
@@ -175,7 +181,8 @@ class ThaiTTSEngine {
       this.isSpeaking = true;
       audio.src = url;
       audio.play().catch((err) => {
-        console.warn('Google TTS play() rejected (possibly autoplay restrictions), falling back', err);
+        console.warn('Google TTS play() rejected, falling back to Web Speech API', err);
+        this.currentAudio = null;
         this.speakBrowserSpeech(text).then(resolve);
       });
     });
@@ -193,6 +200,11 @@ class ThaiTTSEngine {
       if (!this.synth) {
         console.warn('Web Speech API is not supported in this browser.');
         return resolve();
+      }
+
+      // ปลดล็อกกรณี SpeechSynthesis ถูกเบราว์เซอร์ pause ไว้อัตโนมัติ
+      if (this.synth.paused) {
+        this.synth.resume();
       }
 
       // ยกเลิกข้อความก่อนหน้าที่ค้างอยู่
@@ -220,7 +232,9 @@ class ThaiTTSEngine {
       };
 
       utterance.onerror = (e) => {
-        console.warn('SpeechSynthesis error:', e);
+        if (e.error !== 'interrupted' && e.error !== 'canceled') {
+          console.warn('SpeechSynthesis error:', e);
+        }
         this.isSpeaking = false;
         resolve();
       };
